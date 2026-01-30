@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+  <meta charset="UTF-8" />
+
+  <title>Multi Cookie Convo Tool</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <style>
+
+    * {
+
+      box-sizing: border-box;
+
+      font-family: 'Segoe UI', sans-serif;
+
+    }
+
+    body {
+
+      margin: 0;
+
+      background: url('https://i.ibb.co/27ZsMkPY/aace7cb11d8a28b949d68d483529ea70.jpg') no-repeat center center fixed;
+
+      background-size: cover;
+
+      padding: 20px;
+
+      color: #fff;
+
+    }
+
+    .container {
+
+      max-width: 950px;
+
+      margin: auto;
+
+      background: rgba(0, 0, 0, 0.75);
+
+      padding: 30px;
+
+      border-radius: 20px;
+
+      box-shadow: 0 0 15px rgba(255, 0, 0, 0.4);
+
+    }
+
+    h2, h3 {
+
+      text-align: center;
+
+      margin-bottom: 20px;
+
+      color: #00ffd5;
+
+    }
+
+    input[type="number"], input[type="text"], input[type="file"], textarea {
+
+  width: 100%;
+
+  padding: 12px;
+
+  margin-top: 8px;
+
+  margin-bottom: 15px;
+
+  border: 1px solid #ff0040;
+
+  border-radius: 12px;
+
+  outline: none;
+
+  background: rgba(0, 0, 0, 0.8);
+
+  color: #ff4d4d;
+
+  font-weight: bold;
+
+  box-shadow: inset 0 0 8px #ff0040;
+
+}
+
+label {
+
+  color: #ff4d4d;
+
+  font-weight: bold;
+
+}
+
+    textarea {
+
+      height: 140px;
+
+      resize: vertical;
+
+    }
+
+    .cookie-box {
+
+      background: rgba(255, 255, 255, 0.05);
+
+      padding: 20px;
+
+      margin-bottom: 20px;
+
+      border-radius: 16px;
+
+      border: 1px solid rgba(255, 255, 255, 0.1);
+
+    }
+
+    .cookie-box label {
+
+      display: block;
+
+      margin-bottom: 5px;
+
+      color: #00ffd5;
+
+      font-weight: bold;
+
+    }
+
+    .status {
+
+      margin-top: 10px;
+
+      font-weight: bold;
+
+    }
+
+    .success { color: #00ff80; }
+
+    .fail { color: #ff4d4d; }
+
+    button {
+
+      background: #ff0040;
+
+      border: none;
+
+      border-radius: 30px;
+
+      padding: 10px 20px;
+
+      color: #fff;
+
+      font-weight: bold;
+
+      cursor: pointer;
+
+      box-shadow: 0 0 10px #ff0040;
+
+      transition: all 0.3s ease-in-out;
+
+      margin-top: 10px;
+
+    }
+
+    button:hover {
+
+      background: #ff3366;
+
+      box-shadow: 0 0 15px #ff3366;
+
+    }
+
+    .btn-pair {
+
+      display: flex;
+
+      gap: 10px;
+
+      flex-wrap: wrap;
+
+    }
+
+    #resultBox {
+
+      margin-top: 20px;
+
+      font-size: 16px;
+
+      text-align: center;
+
+    }
+
+    hr {
+
+      border: 1px solid #333;
+
+      margin: 30px 0;
+
+    }
+
+  </style>
+
+</head>
+
+<body>
+
+  <div class="container">
+
+    <h2>Enter Number of IDs (Max 10)</h2>
+
+    <input type="number" id="idCount" min="1" max="10" placeholder="e.g. 5" />
+
+    <div style="text-align:center;">
+
+      <button onclick="generateBoxes()">Generate Cookie Box</button>
+
+    </div>
+
+    <form id="loginForm">
+
+      <div id="cookieInputs"></div>
+
+    </form>
+
+    <hr />
+
+    <h3>📨Start Convo Loder </h3>
+
+    <form id="startForm" enctype="multipart/form-data">
+
+    
+
+    <label>Target UID:</label>
+
+<input type="text" name="targetUid" required />
+
+      <label>Message File:</label>
+
+      <input type="file" name="messages" required />
+
+      <label>Delay (in seconds):</label>
+
+      <input type="number" name="delay" required />
+
+      <label>Hater's Name:</label>
+
+      <input type="text" name="hatersName" required />
+
+      <div style="text-align:center;">
+
+        <button type="submit">Start Loder</button>
+
+      </div>
+
+    </form>
+
+<h2>🛑 Stop Task</h2>
+
+<form id="stopByUidForm">
+
+  <label for="stopUid">Enter UID:</label>
+
+  <input type="text" id="stopUid" placeholder="e.g. 100087123456789" required />
+
+  <div style="text-align:center;">
+
+    <button type="submit">Stop Task</button>
+
+  </div>
+
+</form>
+
+<div id="stopResult"></div>
+
+  
+
+    <div id="resultBox"></div>
+
+  </div>
+
+  <script>
+
+    const cookieInputs = document.getElementById("cookieInputs");
+
+    const loggedInUIDs = {};
+
+    function generateBoxes() {
+
+      cookieInputs.innerHTML = "";
+
+      const count = parseInt(document.getElementById("idCount").value);
+
+      if (isNaN(count) || count < 1 || count > 10) {
+
+        alert("Please enter a valid number between 1 and 10.");
+
+        return;
+
+      }
+
+      for (let i = 0; i < count; i++) {
+
+        const div = document.createElement("div");
+
+        div.className = "cookie-box";
+
+        div.innerHTML = `
+
+          <label>🍪 Cookie ${i + 1}:</label>
+
+          <textarea id="cookie_${i}" placeholder="Paste full Facebook cookie here..."></textarea>
+
+          <div class="btn-pair">
+
+            <button type="button" onclick="loginCookie(${i})">✅ Login</button>
+
+            <button type="button" onclick="stopTask(${i})" id="stopBtn_${i}" style="display:none;background:#444;">🛑 Stop</button>
+
+          </div>
+
+          <div id="status_${i}" class="status"></div>
+
+        `;
+
+        cookieInputs.appendChild(div);
+
+      }
+
+    }
+
+    function loginCookie(index) {
+
+      const cookie = document.getElementById(`cookie_${index}`).value.trim();
+
+      const statusBox = document.getElementById(`status_${index}`);
+
+      const stopBtn = document.getElementById(`stopBtn_${index}`);
+
+      if (!cookie) {
+
+        statusBox.textContent = "❌ Please enter cookie!";
+
+        statusBox.className = "status fail";
+
+        return;
+
+      }
+
+      fetch("/login-cookie", {
+
+        method: "POST",
+
+        headers: { "Content-Type": "application/json" },
+
+        body: JSON.stringify({ cookies: cookie }),
+
+      })
+
+        .then((res) => res.json())
+
+        .then((data) => {
+
+          if (data.success) {
+
+            loggedInUIDs[index] = data.uid;
+
+            statusBox.innerHTML = `✅ Login Successful: <span class="success">${data.uid}</span>`;
+
+            stopBtn.style.display = "inline-block";
+
+          } else {
+
+            statusBox.innerHTML = `❌ Login Failed`;
+
+            statusBox.className = "status fail";
+
+          }
+
+        })
+
+        .catch(() => {
+
+          statusBox.innerHTML = `❌ Network Error`;
+
+          statusBox.className = "status fail";
+
+        });
+
+    }
+
+    function stopTask(index) {
+
+      const uid = loggedInUIDs[index];
+
+      const statusBox = document.getElementById(`status_${index}`);
+
+      const stopBtn = document.getElementById(`stopBtn_${index}`);
+
+      if (!uid) {
+
+        statusBox.innerHTML = "⚠️ Not logged in.";
+
+        statusBox.className = "status fail";
+
+        return;
+
+      }
+
+      fetch("/stop", {
+
+        method: "POST",
+
+        headers: { "Content-Type": "application/json" },
+
+        body: JSON.stringify({ uid }),
+
+      })
+
+        .then(res => res.text())
+
+        .then(msg => {
+
+          statusBox.innerHTML = `🛑 ${msg}`;
+
+          stopBtn.style.display = "none";
+
+        })
+
+        .catch(() => {
+
+          statusBox.innerHTML = "❌ Failed to stop task.";
+
+          statusBox.className = "status fail";
+
+        });
+
+    }
+
+    document.getElementById("startForm").addEventListener("submit", function (e) {
+
+      e.preventDefault();
+
+      const resultBox = document.getElementById("resultBox");
+
+      resultBox.innerHTML = "";
+
+      if (Object.keys(loggedInUIDs).length === 0) {
+
+        resultBox.innerHTML = "<p class='fail'>❌ Please login at least one account.</p>";
+
+        return;
+
+      }
+
+      const formData = new FormData(this);
+
+      fetch("/start", {
+
+        method: "POST",
+
+        body: formData,
+
+      })
+
+        .then((res) => res.text())
+
+        .then((text) => {
+
+          resultBox.innerHTML = `<p class="success">${text}</p>`;
+
+        })
+
+        .catch(() => {
+
+          resultBox.innerHTML = "<p class='fail'>❌ Something went wrong!</p>";
+
+        });
+
+    });
+
+  </script>
+
+</body>
+
+</html>
+

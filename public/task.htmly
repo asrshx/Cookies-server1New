@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Task Dashboard | Royal Heroz</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 30px 5%;
+      background: url('https://i.ibb.co/PGJHKLtC/4a9d24188b89e62718fd457ca14e7d88.jpg') no-repeat center center fixed;
+      background-size: cover;
+      color: #0ff;
+      font-family: 'Segoe UI', sans-serif;
+      display: flex;
+      justify-content: center;
+    }
+    .card {
+      background: rgba(0, 0, 0, 0.78);
+      padding: 25px 20px;
+      border-radius: 18px;
+      border: 1px solid rgba(0, 255, 255, 0.3);
+      box-shadow: 0 0 30px rgba(0, 255, 255, 0.3);
+      backdrop-filter: blur(8px);
+      max-width: 850px;
+      width: 100%;
+    }
+    h2, h3 {
+      color: #0ff;
+      text-shadow: 0 0 10px #0ff;
+      margin-bottom: 15px;
+    }
+    textarea {
+      width: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      border: 1px solid #0ff6;
+      color: #0ff;
+      padding: 14px;
+      border-radius: 10px;
+      font-size: 15px;
+      box-shadow: inset 0 0 8px #00f0f088;
+      resize: vertical;
+    }
+    textarea::placeholder {
+      color: #aaa;
+      font-style: italic;
+    }
+    button {
+      margin-top: 12px;
+      padding: 14px;
+      width: 100%;
+      font-size: 17px;
+      background: linear-gradient(135deg, #00e5ff, #00bcd4);
+      color: white;
+      font-weight: bold;
+      border: none;
+      border-radius: 14px;
+      cursor: pointer;
+      box-shadow: 0 0 14px #00f0f0aa;
+      transition: all 0.2s ease-in-out;
+    }
+    button:hover {
+      transform: scale(1.04);
+      box-shadow: 0 0 24px #00f0f0cc;
+    }
+    #liveConsole {
+      height: 180px;
+      overflow-y: auto;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>🎯 Task Dashboard</h2>
+    <p><strong>Task ID:</strong> <span id="taskID"></span></p>
+    <p><strong>Uptime:</strong> <span id="uptime">00:00:00</span></p>
+
+    <h3>🟢 Active Cookies:</h3>
+    <textarea id="activeCookies" readonly></textarea>
+
+    <h3>📡 Live Console:</h3>
+    <textarea id="liveConsole" readonly></textarea>
+
+    <h3>🔁 Replace Cookies</h3>
+    <form id="replaceCookiesForm">
+      <textarea name="newCookies" placeholder="Paste new cookies..." required></textarea>
+      <button type="submit">Update Cookies</button>
+    </form>
+
+    <button id="stopBtn">⛔ Stop This Task</button>
+  </div>
+
+ <script>
+  const taskID = location.pathname.split("/").pop();
+  document.getElementById("taskID").textContent = taskID;
+
+  const liveConsole = document.getElementById("liveConsole");
+  const uptimeEl = document.getElementById("uptime");
+  const activeCookies = document.getElementById("activeCookies");
+  const stopBtn = document.getElementById("stopBtn");
+  const replaceForm = document.getElementById("replaceCookiesForm");
+
+  let uptime = 0;
+  let uptimeTimer;
+
+  function startUptimeCounter(startTime) {
+    if (uptimeTimer) clearInterval(uptimeTimer);
+    uptime = Math.floor((Date.now() - startTime) / 1000);
+
+    uptimeTimer = setInterval(() => {
+      uptime++;
+      const h = String(Math.floor(uptime / 3600)).padStart(2, '0');
+      const m = String(Math.floor((uptime % 3600) / 60)).padStart(2, '0');
+      const s = String(uptime % 60).padStart(2, '0');
+      uptimeEl.textContent = `${h}:${m}:${s}`;
+    }, 1000);
+  }
+
+  function appendConsoleLog(message) {
+    liveConsole.value += `\n${message}`;
+    liveConsole.scrollTop = liveConsole.scrollHeight;
+  }
+
+  function connectWebSocket() {
+    const ws = new WebSocket(`ws://${location.host}/?taskID=${taskID}`);
+
+    ws.onopen = () => {
+      appendConsoleLog("✅ Connected to WebSocket.");
+    };
+
+    ws.onmessage = (msg) => {
+      appendConsoleLog(msg.data);
+    };
+
+    ws.onerror = () => {
+      appendConsoleLog("⚠️ WebSocket error occurred.");
+    };
+
+    ws.onclose = () => {
+      appendConsoleLog("⚠️ WebSocket disconnected. Retrying...");
+      setTimeout(connectWebSocket, 3000);
+    };
+  }
+
+  connectWebSocket();
+
+  // Fetch initial data
+  (async () => {
+    try {
+      const res = await fetch(`/task-meta/${taskID}`);
+      const data = await res.json();
+
+      if (data.cookies) {
+        activeCookies.value = data.cookies;
+      }
+
+      if (Array.isArray(data.logs)) {
+        liveConsole.value = data.logs.join('\n');
+        liveConsole.scrollTop = liveConsole.scrollHeight;
+      }
+
+      if (data.startTime) {
+        startUptimeCounter(data.startTime);
+      } else {
+        uptimeEl.textContent = "00:00:00";
+      }
+
+    } catch (err) {
+      liveConsole.value = '⚠️ Failed to load task data.';
+      uptimeEl.textContent = "--:--:--";
+    }
+  })();
+
+  // Handle cookie replacement
+  replaceForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const newCookies = replaceForm.newCookies.value;
+    await fetch("/update-cookies", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ taskID, newCookies })
+    });
+    activeCookies.value = newCookies;
+    alert("Cookies replaced successfully.");
+  });
+
+  // Stop task handler
+  stopBtn.addEventListener("click", async () => {
+    await fetch("/stop", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ taskID })
+    });
+    alert("Task stopped.");
+    location.href = "/";
+  });
+</script>
+
+</body>
+</html>
